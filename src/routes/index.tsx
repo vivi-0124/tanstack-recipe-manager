@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { authClient } from '../lib/auth-client'
 import { GoogleLoginButton } from '../components/google-login-button'
+import { authClient } from '../lib/auth-client'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -25,9 +25,7 @@ function Home() {
           <div className="text-center">Loading...</div>
         ) : session ? (
           <div className="space-y-4 text-center">
-            <p className="font-medium text-emerald-600">
-              Logged in
-            </p>
+            <p className="font-medium text-emerald-600">Logged in</p>
             <button
               onClick={() => authClient.signOut()}
               className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors"

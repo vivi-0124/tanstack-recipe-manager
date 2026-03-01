@@ -1,14 +1,13 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../db/index";
-import * as schema from "../db/schemas/auth";
-import { dash } from "@better-auth/infra";
-import { tanstackStartCookies } from "better-auth/tanstack-start";
-
+import { dash } from '@better-auth/infra'
+import { betterAuth } from 'better-auth'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { tanstackStartCookies } from 'better-auth/tanstack-start'
+import { db } from '../db/index'
+import * as schema from '../db/schemas/auth'
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: "sqlite",
+    provider: 'sqlite',
     schema,
   }),
   baseURL: process.env.BETTER_AUTH_URL!,
@@ -18,8 +17,5 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
   },
-  plugins: [
-    dash(),
-    tanstackStartCookies()
-  ]
-});
+  plugins: [dash(), tanstackStartCookies()],
+})

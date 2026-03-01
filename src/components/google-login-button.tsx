@@ -1,13 +1,13 @@
-import { authClient } from "../lib/auth-client";
-import { Button } from "./ui/button";
+import { authClient } from '../lib/auth-client'
+import { Button } from './ui/button'
 
 export function GoogleLoginButton() {
   const handleLogin = async () => {
     await authClient.signIn.social({
-      provider: "google",
-      callbackURL: "/",
-    });
-  };
+      provider: 'google',
+      callbackURL: '/',
+    })
+  }
 
   return (
     <Button onClick={handleLogin} variant="outline" className="w-full">
@@ -28,5 +28,5 @@ export function GoogleLoginButton() {
       </svg>
       Googleでログイン
     </Button>
-  );
+  )
 }

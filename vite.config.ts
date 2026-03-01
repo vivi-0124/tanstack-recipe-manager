@@ -20,7 +20,7 @@ const config = defineConfig({
     viteReact(),
   ],
   server: {
-    allowedHosts: ["coy-mycological-dania.ngrok-free.dev"],
+    allowedHosts: ['coy-mycological-dania.ngrok-free.dev'],
   },
 })
 
