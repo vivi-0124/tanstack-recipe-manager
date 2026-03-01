@@ -10,7 +10,7 @@ const db = drizzle(new Database("database.sqlite"), { schema });
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "sqlite", schema }),
-  baseURL: "http://localhost:3000/",
+  baseURL: process.env.BETTER_AUTH_URL!,
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
