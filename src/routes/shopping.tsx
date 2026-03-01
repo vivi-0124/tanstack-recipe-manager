@@ -10,14 +10,15 @@ import {
   toggleShoppingItem,
 } from '../actions/shopping'
 import { Button } from '../components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card'
 import { Checkbox } from '../components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
 
 export const Route = createFileRoute('/shopping')({
@@ -32,6 +33,7 @@ function ShoppingPage() {
   const { items } = Route.useLoaderData()
   const navigate = useNavigate()
   const [isAdding, setIsAdding] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     quantity: '',
@@ -55,6 +57,7 @@ function ShoppingPage() {
       if (result.success) {
         toast.success('買い物リストに追加しました！')
         setFormData({ name: '', quantity: '', unit: '' })
+        setIsDialogOpen(false)
         refresh()
       }
     } catch {
@@ -91,28 +94,22 @@ function ShoppingPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          買い物リスト
-        </h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          購入が必要な食材を管理しましょう。
-        </p>
-      </div>
-
-      <Card className="mt-4 border-border/60 sm:mt-6">
-        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
-          <CardTitle className="text-base">アイテムを追加</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            買い物リストに食材を追加します。在庫管理ページからも追加できます。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-          <form
-            onSubmit={handleAdd}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 sm:items-end"
-          >
-            <div className="col-span-2 space-y-1.5 sm:col-span-1 sm:space-y-2">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="size-4" />
+            アイテムを追加
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>アイテムを追加</DialogTitle>
+            <DialogDescription>
+              買い物リストに食材を追加します。在庫管理ページからも追加できます。
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAdd} className="flex flex-col gap-3">
+            <div className="space-y-1.5">
               <label htmlFor={`${formId}-name`} className="text-sm font-medium">
                 食材名
               </label>
@@ -126,7 +123,7 @@ function ShoppingPage() {
                 required
               />
             </div>
-            <div className="col-span-2 space-y-1.5 sm:col-span-1 sm:space-y-2">
+            <div className="space-y-1.5">
               <label
                 htmlFor={`${formId}-quantity`}
                 className="text-sm font-medium"
@@ -150,15 +147,11 @@ function ShoppingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, unit: e.target.value })
                   }
-                  className="w-16 sm:w-20"
+                  className="w-20"
                 />
               </div>
             </div>
-            <Button
-              type="submit"
-              disabled={isAdding}
-              className="col-span-2 w-full sm:col-span-1 sm:col-start-4"
-            >
+            <Button type="submit" disabled={isAdding} className="w-full">
               {isAdding ? (
                 <RefreshCcw className="size-4 animate-spin" />
               ) : (
@@ -167,8 +160,8 @@ function ShoppingPage() {
               追加する
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       <div className="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
         <div className="space-y-2">

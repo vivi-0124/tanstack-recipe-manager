@@ -23,12 +23,13 @@ import {
 import { addShoppingItem } from '../actions/shopping'
 import { Button } from '../components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
 import {
   Table,
@@ -65,6 +66,7 @@ function InventoryPage() {
   const { ingredients } = Route.useLoaderData()
   const navigate = useNavigate()
   const [isAdding, setIsAdding] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [formData, setFormData] = useState<IngredientFormData>(EMPTY_FORM)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editData, setEditData] = useState<IngredientFormData>(EMPTY_FORM)
@@ -95,6 +97,7 @@ function InventoryPage() {
       if (result.success) {
         toast.success('食材を追加しました！')
         setFormData(EMPTY_FORM)
+        setIsDialogOpen(false)
         refresh()
       }
     } catch {
@@ -177,28 +180,22 @@ function InventoryPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          在庫管理
-        </h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          冷蔵庫の中身を管理しましょう。
-        </p>
-      </div>
-
-      <Card className="mt-4 border-border/60 sm:mt-6">
-        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
-          <CardTitle className="text-base">食材を追加</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            新しく購入した食材や使いかけの食材を登録します。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-          <form
-            onSubmit={handleAdd}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 sm:items-end"
-          >
-            <div className="col-span-2 space-y-1.5 sm:col-span-1 sm:space-y-2">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="size-4" />
+            食材を追加
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>食材を追加</DialogTitle>
+            <DialogDescription>
+              新しく購入した食材や使いかけの食材を登録します。
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAdd} className="flex flex-col gap-3">
+            <div className="space-y-1.5">
               <label htmlFor={`${formId}-name`} className="text-sm font-medium">
                 名前
               </label>
@@ -212,7 +209,7 @@ function InventoryPage() {
                 required
               />
             </div>
-            <div className="col-span-1 space-y-1.5 sm:space-y-2">
+            <div className="space-y-1.5">
               <label
                 htmlFor={`${formId}-quantity`}
                 className="text-sm font-medium"
@@ -236,11 +233,11 @@ function InventoryPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, unit: e.target.value })
                   }
-                  className="w-16 sm:w-20"
+                  className="w-20"
                 />
               </div>
             </div>
-            <div className="col-span-1 space-y-1.5 sm:space-y-2">
+            <div className="space-y-1.5">
               <label
                 htmlFor={`${formId}-expiry`}
                 className="text-sm font-medium"
@@ -256,11 +253,7 @@ function InventoryPage() {
                 }
               />
             </div>
-            <Button
-              type="submit"
-              disabled={isAdding}
-              className="col-span-2 w-full sm:col-span-1"
-            >
+            <Button type="submit" disabled={isAdding} className="w-full">
               {isAdding ? (
                 <RefreshCcw className="size-4 animate-spin" />
               ) : (
@@ -269,8 +262,8 @@ function InventoryPage() {
               追加する
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       {/* デスクトップ: テーブル表示 */}
       <div className="mt-6 hidden overflow-hidden rounded-xl border border-border/60 bg-background sm:block">

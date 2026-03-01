@@ -15,6 +15,13 @@
       "when": 1772401023394,
       "tag": "0001_lumpy_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772406663636,
+      "tag": "0002_thankful_cerise",
+      "breakpoints": true
     }
   ]
 }

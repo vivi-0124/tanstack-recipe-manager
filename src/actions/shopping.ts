@@ -4,7 +4,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { db } from '../db/index'
-import { shoppingLists } from '../db/schemas/app'
+import { recipeIngredients, shoppingLists } from '../db/schemas/app'
 import { auth } from '../lib/auth'
 
 /**
@@ -128,3 +128,43 @@ export const getMyShoppingList = createServerFn({ method: 'GET' }).handler(
     }
   },
 )
+
+/**
+ * Server function to add all ingredients from a recipe to the shopping list.
+ */
+export const addRecipeToShoppingList = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ recipeId: z.string() }))
+  .handler(async ({ data: { recipeId } }) => {
+    const session = await requireSession()
+
+    try {
+      // レシピの材料を全て取得
+      const ingredientsList = await db
+        .select()
+        .from(recipeIngredients)
+        .where(eq(recipeIngredients.recipeId, recipeId))
+
+      if (ingredientsList.length === 0) {
+        throw new Error('No ingredients found for this recipe')
+      }
+
+      // 材料を一括で買い物リストに追加
+      await db.insert(shoppingLists).values(
+        ingredientsList.map((ing) => ({
+          id: nanoid(),
+          userId: session.user.id,
+          recipeId,
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+        })),
+      )
+
+      return { success: true, count: ingredientsList.length }
+    } catch (error) {
+      console.error('Add recipe to shopping list error:', error)
+      const message =
+        error instanceof Error ? error.message : 'Failed to add recipe ingredients to shopping list'
+      throw new Error(message)
+    }
+  })

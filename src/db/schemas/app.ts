@@ -61,6 +61,24 @@ export const ingredients = sqliteTable(
 )
 
 /**
+ * Recipe ingredients table to store ingredient details per recipe.
+ */
+export const recipeIngredients = sqliteTable(
+  'recipe_ingredients',
+  {
+    id: text('id').primaryKey(),
+    recipeId: text('recipe_id')
+      .notNull()
+      .references(() => recipes.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    quantity: text('quantity'),
+    unit: text('unit'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+  },
+  (table) => [index('recipeIngredients_recipeId_idx').on(table.recipeId)],
+)
+
+/**
  * Shopping lists table.
  */
 export const shoppingLists = sqliteTable(
@@ -93,12 +111,23 @@ export const shoppingLists = sqliteTable(
 /**
  * Relations
  */
-export const recipesRelations = relations(recipes, ({ one }) => ({
+export const recipesRelations = relations(recipes, ({ one, many }) => ({
   user: one(user, {
     fields: [recipes.userId],
     references: [user.id],
   }),
+  recipeIngredients: many(recipeIngredients),
 }))
+
+export const recipeIngredientsRelations = relations(
+  recipeIngredients,
+  ({ one }) => ({
+    recipe: one(recipes, {
+      fields: [recipeIngredients.recipeId],
+      references: [recipes.id],
+    }),
+  }),
+)
 
 export const ingredientsRelations = relations(ingredients, ({ one }) => ({
   user: one(user, {
