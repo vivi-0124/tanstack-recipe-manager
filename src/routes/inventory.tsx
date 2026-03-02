@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../components/ui/dialog'
+import { Empty, EmptyDescription, EmptyMedia } from '../components/ui/empty'
 import { Input } from '../components/ui/input'
 import {
   Table,
@@ -39,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table'
+import { UnitChips } from '../components/unit-chips'
 
 export const Route = createFileRoute('/inventory')({
   component: InventoryPage,
@@ -236,6 +238,10 @@ function InventoryPage() {
                   className="w-20"
                 />
               </div>
+              <UnitChips
+                selectedUnit={formData.unit}
+                onSelect={(unit) => setFormData({ ...formData, unit })}
+              />
             </div>
             <div className="space-y-1.5">
               <label
@@ -279,11 +285,15 @@ function InventoryPage() {
           <TableBody>
             {ingredients.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  在庫がありません。新しい食材を追加してください。
+                <TableCell colSpan={4} className="p-0">
+                  <Empty className="border-0">
+                    <EmptyMedia variant="icon">
+                      <Box />
+                    </EmptyMedia>
+                    <EmptyDescription>
+                      在庫がありません。新しい食材を追加してください。
+                    </EmptyDescription>
+                  </Empty>
                 </TableCell>
               </TableRow>
             ) : (
@@ -301,26 +311,34 @@ function InventoryPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          <Input
-                            value={editData.quantity}
-                            onChange={(e) =>
-                              setEditData({
-                                ...editData,
-                                quantity: e.target.value,
-                              })
+                        <div className="space-y-1">
+                          <div className="flex gap-1">
+                            <Input
+                              value={editData.quantity}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  quantity: e.target.value,
+                                })
+                              }
+                              className="h-8 w-16"
+                            />
+                            <Input
+                              value={editData.unit}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  unit: e.target.value,
+                                })
+                              }
+                              className="h-8 w-16"
+                            />
+                          </div>
+                          <UnitChips
+                            selectedUnit={editData.unit}
+                            onSelect={(unit) =>
+                              setEditData({ ...editData, unit })
                             }
-                            className="h-8 w-16"
-                          />
-                          <Input
-                            value={editData.unit}
-                            onChange={(e) =>
-                              setEditData({
-                                ...editData,
-                                unit: e.target.value,
-                              })
-                            }
-                            className="h-8 w-16"
                           />
                         </div>
                       </TableCell>
@@ -420,12 +438,14 @@ function InventoryPage() {
       {/* モバイル: カード表示 */}
       <div className="mt-4 space-y-2 sm:hidden">
         {ingredients.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border/60 py-12">
-            <Box className="size-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
+          <Empty>
+            <EmptyMedia variant="icon">
+              <Box />
+            </EmptyMedia>
+            <EmptyDescription>
               在庫がありません。食材を追加してください。
-            </p>
-          </div>
+            </EmptyDescription>
+          </Empty>
         ) : (
           ingredients.map((item) => (
             <div
@@ -470,6 +490,10 @@ function InventoryPage() {
                       }
                     />
                   </div>
+                  <UnitChips
+                    selectedUnit={editData.unit}
+                    onSelect={(unit) => setEditData({ ...editData, unit })}
+                  />
                   <div className="flex gap-2">
                     <Button
                       size="sm"

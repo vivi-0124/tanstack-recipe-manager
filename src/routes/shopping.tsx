@@ -19,7 +19,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../components/ui/dialog'
+import { Empty, EmptyDescription, EmptyMedia } from '../components/ui/empty'
 import { Input } from '../components/ui/input'
+import { UnitChips } from '../components/unit-chips'
 
 export const Route = createFileRoute('/shopping')({
   component: ShoppingPage,
@@ -150,6 +152,10 @@ function ShoppingPage() {
                   className="w-20"
                 />
               </div>
+              <UnitChips
+                selectedUnit={formData.unit}
+                onSelect={(unit) => setFormData({ ...formData, unit })}
+              />
             </div>
             <Button type="submit" disabled={isAdding} className="w-full">
               {isAdding ? (
@@ -169,12 +175,14 @@ function ShoppingPage() {
             未購入 ({unpurchased.length})
           </h2>
           {unpurchased.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border/60 py-12">
-              <ShoppingCart className="size-8 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
+            <Empty>
+              <EmptyMedia variant="icon">
+                <ShoppingCart />
+              </EmptyMedia>
+              <EmptyDescription>
                 買い物リストは空です。素晴らしい!
-              </p>
-            </div>
+              </EmptyDescription>
+            </Empty>
           ) : (
             <div className="space-y-2">
               {unpurchased.map((item) => (

@@ -1,5 +1,11 @@
 import { relations, sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from 'drizzle-orm/sqlite-core'
 import { user } from './auth'
 
 /**
@@ -129,6 +135,28 @@ export const shoppingLists = sqliteTable(
 )
 
 /**
+ * User custom units table for personalized unit suggestions.
+ */
+export const userUnits = sqliteTable(
+  'user_units',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    index('userUnits_userId_idx').on(table.userId),
+    unique('userUnits_userId_name_unique').on(table.userId, table.name),
+  ],
+)
+
+/**
  * Relations
  */
 export const recipesRelations = relations(recipes, ({ one, many }) => ({
@@ -172,5 +200,12 @@ export const shoppingListsRelations = relations(shoppingLists, ({ one }) => ({
   recipe: one(recipes, {
     fields: [shoppingLists.recipeId],
     references: [recipes.id],
+  }),
+}))
+
+export const userUnitsRelations = relations(userUnits, ({ one }) => ({
+  user: one(user, {
+    fields: [userUnits.userId],
+    references: [user.id],
   }),
 }))

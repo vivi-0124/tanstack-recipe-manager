@@ -29,6 +29,7 @@ import {
 import { getMyRecipes, getRecipeDetail } from '../actions/recipes_get'
 import { createShareLink } from '../actions/sharing'
 import { addRecipeToShoppingList, addShoppingItem } from '../actions/shopping'
+import { getMyUnits } from '../actions/units'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import {
@@ -46,6 +47,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../components/ui/dialog'
+import { Empty, EmptyDescription, EmptyMedia } from '../components/ui/empty'
 import { Input } from '../components/ui/input'
 import { ScrollArea } from '../components/ui/scroll-area'
 import { Separator } from '../components/ui/separator'
@@ -53,35 +55,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea'
 import { toHalfWidth } from '../lib/utils'
 
-/** Predefined unit suggestions for recipe ingredients */
-const UNIT_SUGGESTIONS = [
-  '個',
-  '本',
-  '枚',
-  '切れ',
-  '束',
-  '袋',
-  '缶',
-  'パック',
-  '大さじ',
-  '小さじ',
-  'カップ',
-  'ml',
-  'L',
-  'g',
-  'kg',
-  'cm',
-  '合',
-  'cc',
-  '少々',
-  '適量',
-] as const
-
 export const Route = createFileRoute('/recipes')({
   component: RecipesPage,
   loader: async () => {
-    const recipes = await getMyRecipes()
-    return { recipes }
+    const [recipes, units] = await Promise.all([getMyRecipes(), getMyUnits()])
+    return { recipes, units }
   },
 })
 
@@ -105,7 +83,8 @@ interface RecipeDetail {
 }
 
 function RecipesPage() {
-  const { recipes } = Route.useLoaderData()
+  const { recipes, units } = Route.useLoaderData()
+  const unitNames = units.map((u) => u.name)
   const navigate = useNavigate()
   const [url, setUrl] = useState('')
   const [isImporting, setIsImporting] = useState(false)
@@ -308,6 +287,7 @@ function RecipesPage() {
             <TabsContent value="manual">
               <RecipeForm
                 mode="create"
+                unitNames={unitNames}
                 onSubmit={async (data) => {
                   try {
                     const result = await createFn({ data })
@@ -329,12 +309,14 @@ function RecipesPage() {
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         {recipes.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 py-12 sm:py-16">
-            <BookOpen className="size-10 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
+          <Empty className="col-span-full">
+            <EmptyMedia variant="icon">
+              <BookOpen />
+            </EmptyMedia>
+            <EmptyDescription>
               レシピがまだありません。上のフォームからインポートしましょう!
-            </p>
-          </div>
+            </EmptyDescription>
+          </Empty>
         ) : (
           recipes.map((recipe) => (
             <Card
@@ -442,6 +424,7 @@ function RecipesPage() {
               </DialogHeader>
               <RecipeForm
                 mode="edit"
+                unitNames={unitNames}
                 initialData={{
                   title: selectedRecipe.title,
                   description: selectedRecipe.description ?? '',
@@ -547,7 +530,7 @@ function RecipesPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"
-                                  className="size-6 opacity-0 transition-opacity group-hover:opacity-100 data-[loading=true]:opacity-100"
+                                  className="size-6 data-[loading=true]:opacity-100"
                                   data-loading={addingIngredientId === ing.id}
                                   disabled={addingIngredientId === ing.id}
                                   onClick={() => handleAddSingleIngredient(ing)}
@@ -764,6 +747,7 @@ interface RecipeFormProps {
   initialData?: RecipeFormInitialData
   onSubmit: (data: RecipeFormData) => Promise<void>
   onCancel?: () => void
+  unitNames: string[]
 }
 
 function RecipeForm({
@@ -771,6 +755,7 @@ function RecipeForm({
   initialData,
   onSubmit,
   onCancel,
+  unitNames,
 }: RecipeFormProps) {
   const formId = useId()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -981,22 +966,26 @@ function RecipeForm({
                   </div>
                   {/* 単位の候補チップ */}
                   <div className="flex flex-wrap gap-1 pl-0.5">
-                    {UNIT_SUGGESTIONS.map((unit) => (
+                    {unitNames.map((unitName) => (
                       <button
-                        key={unit}
+                        key={unitName}
                         type="button"
                         disabled={isSubmitting}
                         className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                          ing.unit === unit
+                          ing.unit === unitName
                             ? 'border-primary bg-primary text-primary-foreground'
                             : 'border-border bg-muted/50 text-muted-foreground hover:border-primary/50 hover:text-foreground'
                         }`}
                         onClick={() => {
                           // 同じ単位をタップしたらクリア
-                          updateIngredient(idx, 'unit', ing.unit === unit ? '' : unit)
+                          updateIngredient(
+                            idx,
+                            'unit',
+                            ing.unit === unitName ? '' : unitName,
+                          )
                         }}
                       >
-                        {unit}
+                        {unitName}
                       </button>
                     ))}
                   </div>
@@ -1063,7 +1052,6 @@ function RecipeForm({
           {isSubmitting ? submittingLabel : submitLabel}
         </Button>
       </div>
-
     </form>
   )
 }
