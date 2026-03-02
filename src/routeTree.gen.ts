@@ -13,6 +13,7 @@ import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as RecipesRouteImport } from './routes/recipes'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShareTokenRouteImport } from './routes/share/$token'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const ShoppingRoute = ShoppingRouteImport.update({
@@ -35,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
+  '/share/$token': typeof ShareTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof InventoryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
+  '/share/$token': typeof ShareTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,34 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
+  '/share/$token': typeof ShareTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/inventory' | '/recipes' | '/shopping' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/inventory'
+    | '/recipes'
+    | '/shopping'
+    | '/share/$token'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inventory' | '/recipes' | '/shopping' | '/api/auth/$'
-  id: '__root__' | '/' | '/inventory' | '/recipes' | '/shopping' | '/api/auth/$'
+  to:
+    | '/'
+    | '/inventory'
+    | '/recipes'
+    | '/shopping'
+    | '/share/$token'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/inventory'
+    | '/recipes'
+    | '/shopping'
+    | '/share/$token'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +104,7 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRoute
   RecipesRoute: typeof RecipesRoute
   ShoppingRoute: typeof ShoppingRoute
+  ShareTokenRoute: typeof ShareTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -109,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -124,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRoute,
   RecipesRoute: RecipesRoute,
   ShoppingRoute: ShoppingRoute,
+  ShareTokenRoute: ShareTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

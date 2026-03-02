@@ -2,14 +2,17 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import {
   BookOpen,
+  Check,
   ChefHat,
   Clock,
+  Copy,
   ExternalLink,
   List,
   Loader2,
   Minus,
   Pencil,
   Plus,
+  Share2,
   ShoppingCart,
   Trash2,
   Users,
@@ -24,6 +27,7 @@ import {
   updateRecipe,
 } from '../actions/recipes'
 import { getMyRecipes, getRecipeDetail } from '../actions/recipes_get'
+import { createShareLink } from '../actions/sharing'
 import { addRecipeToShoppingList, addShoppingItem } from '../actions/shopping'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -118,6 +122,9 @@ function RecipesPage() {
   )
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [isCopied, setIsCopied] = useState(false)
 
   const importFn = useServerFn(importRecipe)
   const createFn = useServerFn(createRecipe)
@@ -126,6 +133,7 @@ function RecipesPage() {
   const getDetailFn = useServerFn(getRecipeDetail)
   const addToShoppingFn = useServerFn(addRecipeToShoppingList)
   const addItemFn = useServerFn(addShoppingItem)
+  const shareFn = useServerFn(createShareLink)
 
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -192,6 +200,8 @@ function RecipesPage() {
     setIsDetailOpen(true)
     setIsLoadingDetail(true)
     setIsEditing(false)
+    setShareUrl(null)
+    setIsCopied(false)
     try {
       const detail = await getDetailFn({ data: { recipeId } })
       setSelectedRecipe(detail as RecipeDetail)
@@ -362,7 +372,11 @@ function RecipesPage() {
         open={isDetailOpen}
         onOpenChange={(open) => {
           setIsDetailOpen(open)
-          if (!open) setIsEditing(false)
+          if (!open) {
+            setIsEditing(false)
+            setShareUrl(null)
+            setIsCopied(false)
+          }
         }}
       >
         <DialogContent className="max-h-[85vh] max-w-2xl p-0">
@@ -569,6 +583,72 @@ function RecipesPage() {
                         元のサイトを見る
                       </a>
                     </>
+                  )}
+
+                  {/* 共有 */}
+                  <Separator />
+                  {shareUrl ? (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-muted-foreground text-sm">
+                        共有リンク
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          readOnly
+                          value={shareUrl}
+                          className="text-sm"
+                          onClick={(e) => e.currentTarget.select()}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(shareUrl)
+                            setIsCopied(true)
+                            toast.success('リンクをコピーしました')
+                            setTimeout(() => setIsCopied(false), 2000)
+                          }}
+                        >
+                          {isCopied ? (
+                            <Check className="size-4" />
+                          ) : (
+                            <Copy className="size-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      disabled={isSharing}
+                      onClick={async () => {
+                        setIsSharing(true)
+                        try {
+                          const result = await shareFn({
+                            data: { recipeId: selectedRecipe.id },
+                          })
+                          const url = `${window.location.origin}/share/${result.shareToken}`
+                          setShareUrl(url)
+                          await navigator.clipboard.writeText(url)
+                          setIsCopied(true)
+                          toast.success('共有リンクをコピーしました')
+                          setTimeout(() => setIsCopied(false), 2000)
+                        } catch (error) {
+                          toast.error('共有リンクの作成に失敗しました。')
+                          console.error(error)
+                        } finally {
+                          setIsSharing(false)
+                        }
+                      }}
+                    >
+                      {isSharing ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Share2 className="size-4" />
+                      )}
+                      共有リンクを作成
+                    </Button>
                   )}
 
                   {/* 編集・削除 */}

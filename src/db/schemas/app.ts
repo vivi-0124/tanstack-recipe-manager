@@ -79,6 +79,27 @@ export const recipeIngredients = sqliteTable(
 )
 
 /**
+ * Recipe shares table to store share tokens for recipe sharing.
+ */
+export const recipeShares = sqliteTable(
+  'recipe_shares',
+  {
+    id: text('id').primaryKey(),
+    recipeId: text('recipe_id')
+      .notNull()
+      .references(() => recipes.id, { onDelete: 'cascade' }),
+    shareToken: text('share_token').notNull().unique(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  (table) => [
+    index('recipeShares_shareToken_idx').on(table.shareToken),
+    index('recipeShares_recipeId_idx').on(table.recipeId),
+  ],
+)
+
+/**
  * Shopping lists table.
  */
 export const shoppingLists = sqliteTable(
@@ -117,6 +138,7 @@ export const recipesRelations = relations(recipes, ({ one, many }) => ({
     references: [user.id],
   }),
   recipeIngredients: many(recipeIngredients),
+  shares: many(recipeShares),
 }))
 
 export const recipeIngredientsRelations = relations(
@@ -128,6 +150,13 @@ export const recipeIngredientsRelations = relations(
     }),
   }),
 )
+
+export const recipeSharesRelations = relations(recipeShares, ({ one }) => ({
+  recipe: one(recipes, {
+    fields: [recipeShares.recipeId],
+    references: [recipes.id],
+  }),
+}))
 
 export const ingredientsRelations = relations(ingredients, ({ one }) => ({
   user: one(user, {
