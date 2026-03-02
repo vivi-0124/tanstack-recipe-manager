@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { BookOpen, Box, Home, ShoppingCart } from 'lucide-react'
+import { authClient } from '../lib/auth-client'
 
 const NAV_ITEMS = [
   { to: '/' as const, label: 'ホーム', icon: Home },
@@ -11,8 +12,14 @@ const NAV_ITEMS = [
 /**
  * Bottom navigation bar for mobile devices.
  * Only visible on small screens (below sm breakpoint).
+ * Hidden when the user is not logged in.
  */
 export function MobileBottomNav() {
+  const { data } = authClient.useSession()
+
+  // 未ログイン時はボトムナビを非表示
+  if (!data?.session) return null
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-sm sm:hidden">
       {/* セーフエリア対応のため padding-bottom を追加 */}
