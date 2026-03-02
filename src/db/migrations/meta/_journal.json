@@ -43,6 +43,13 @@
       "when": 1772411848045,
       "tag": "0005_young_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1772416973063,
+      "tag": "0006_dear_magik",
+      "breakpoints": true
     }
   ]
 }

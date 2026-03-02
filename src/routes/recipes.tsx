@@ -14,6 +14,7 @@ import {
   Plus,
   Share2,
   ShoppingCart,
+  StickyNote,
   Trash2,
   Users,
   UtensilsCrossed,
@@ -72,6 +73,7 @@ interface RecipeDetail {
   prepTime: number | null
   cookTime: number | null
   instructions: string | null
+  memo: string | null
   isFavorite: boolean
   ingredients: Array<{
     id: string
@@ -268,12 +270,16 @@ function RecipesPage() {
               <form onSubmit={handleImport} className="flex flex-col gap-3">
                 <Input
                   type="url"
-                  placeholder="https://example.com/recipe/..."
+                  placeholder="https://example.com/recipe/... or YouTube URL"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   required
                   disabled={isImporting}
                 />
+                <p className="text-xs text-muted-foreground">
+                  レシピサイトのURLまたはYouTube動画のURLを入力してください。
+                  YouTube動画の場合は字幕と説明欄からレシピを抽出します。
+                </p>
                 <Button type="submit" disabled={isImporting} className="w-full">
                   {isImporting ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -427,11 +433,13 @@ function RecipesPage() {
                 unitNames={unitNames}
                 initialData={{
                   title: selectedRecipe.title,
+                  sourceUrl: selectedRecipe.sourceUrl ?? '',
                   description: selectedRecipe.description ?? '',
                   servings: selectedRecipe.servings?.toString() ?? '',
                   prepTime: selectedRecipe.prepTime?.toString() ?? '',
                   cookTime: selectedRecipe.cookTime?.toString() ?? '',
                   instructions: selectedRecipe.instructions ?? '',
+                  memo: selectedRecipe.memo ?? '',
                   ingredients:
                     selectedRecipe.ingredients.length > 0
                       ? selectedRecipe.ingredients.map((ing) => ({
@@ -607,6 +615,22 @@ function RecipesPage() {
                     </>
                   )}
 
+                  {/* メモ */}
+                  {selectedRecipe.memo && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h3 className="mb-2 flex items-center gap-2 font-semibold text-base">
+                          <StickyNote className="size-4" />
+                          メモ
+                        </h3>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                          {selectedRecipe.memo}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
                   {/* 共有 */}
                   <Separator />
                   {shareUrl ? (
@@ -724,21 +748,25 @@ interface IngredientInput {
 
 interface RecipeFormData {
   title: string
+  sourceUrl?: string
   description?: string
   servings?: number
   prepTime?: number
   cookTime?: number
   instructions?: string
+  memo?: string
   ingredients?: Array<{ name: string; quantity?: string; unit?: string }>
 }
 
 interface RecipeFormInitialData {
   title: string
+  sourceUrl: string
   description: string
   servings: string
   prepTime: string
   cookTime: string
   instructions: string
+  memo: string
   ingredients: IngredientInput[]
 }
 
@@ -760,6 +788,7 @@ function RecipeForm({
   const formId = useId()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [title, setTitle] = useState(initialData?.title ?? '')
+  const [sourceUrl, setSourceUrl] = useState(initialData?.sourceUrl ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [servings, setServings] = useState(initialData?.servings ?? '')
   const [prepTime, setPrepTime] = useState(initialData?.prepTime ?? '')
@@ -767,6 +796,7 @@ function RecipeForm({
   const [instructions, setInstructions] = useState(
     initialData?.instructions ?? '',
   )
+  const [memo, setMemo] = useState(initialData?.memo ?? '')
   const [ingredientInputs, setIngredientInputs] = useState<IngredientInput[]>(
     initialData?.ingredients ?? [{ name: '', quantity: '', unit: '' }],
   )
@@ -808,11 +838,13 @@ function RecipeForm({
 
       await onSubmit({
         title: title.trim(),
+        sourceUrl: sourceUrl.trim() || undefined,
         description: description.trim() || undefined,
         servings: servings ? Number.parseInt(servings, 10) : undefined,
         prepTime: prepTime ? Number.parseInt(prepTime, 10) : undefined,
         cookTime: cookTime ? Number.parseInt(cookTime, 10) : undefined,
         instructions: instructions.trim() || undefined,
+        memo: memo.trim() || undefined,
         ingredients: validIngredients.length > 0 ? validIngredients : undefined,
       })
     } finally {
@@ -842,6 +874,24 @@ function RecipeForm({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {/* 参照URL */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor={`${formId}-sourceUrl`}
+              className="text-sm font-medium"
+            >
+              参照URL
+            </label>
+            <Input
+              id={`${formId}-sourceUrl`}
+              type="url"
+              placeholder="https://example.com/recipe/..."
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
               disabled={isSubmitting}
             />
           </div>
@@ -1019,6 +1069,21 @@ function RecipeForm({
               onChange={(e) => setInstructions(e.target.value)}
               disabled={isSubmitting}
               rows={6}
+            />
+          </div>
+
+          {/* メモ */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={`${formId}-memo`} className="text-sm font-medium">
+              メモ
+            </label>
+            <Textarea
+              id={`${formId}-memo`}
+              placeholder="コツや気付いたことなど自由にメモ..."
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              disabled={isSubmitting}
+              rows={3}
             />
           </div>
         </div>

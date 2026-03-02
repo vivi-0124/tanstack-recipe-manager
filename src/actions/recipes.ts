@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { db } from '../db/index'
 import { recipeIngredients, recipes } from '../db/schemas/app'
 import { auth } from '../lib/auth'
+import { extractRecipeWithGemini } from '../lib/gemini'
+import { fetchYouTubeVideoInfo, isYouTubeUrl } from '../lib/youtube'
 
 const ingredientInputSchema = z.object({
   name: z.string().min(1),
@@ -16,11 +18,13 @@ const ingredientInputSchema = z.object({
 
 const createRecipeInputSchema = z.object({
   title: z.string().min(1),
+  sourceUrl: z.string().url().optional(),
   description: z.string().optional(),
   servings: z.number().int().positive().optional(),
   prepTime: z.number().int().nonnegative().optional(),
   cookTime: z.number().int().nonnegative().optional(),
   instructions: z.string().optional(),
+  memo: z.string().optional(),
   ingredients: z.array(ingredientInputSchema).optional(),
 })
 
@@ -45,12 +49,13 @@ export const createRecipe = createServerFn({ method: 'POST' })
         id: recipeId,
         userId: session.user.id,
         title: data.title,
-        sourceUrl: null,
+        sourceUrl: data.sourceUrl ?? null,
         description: data.description ?? null,
         servings: data.servings ?? null,
         prepTime: data.prepTime ?? null,
         cookTime: data.cookTime ?? null,
         instructions: data.instructions ?? null,
+        memo: data.memo ?? null,
         isFavorite: false,
       })
 
@@ -102,7 +107,7 @@ const recipeExtractionSchema = {
     instructions: {
       type: 'string',
       description:
-        'Step-by-step cooking instructions as a numbered list in plain text',
+        'Step-by-step cooking instructions. Each step must be on its own line, prefixed with a number and period (e.g. "1. Step one\\n2. Step two\\n3. Step three")',
     },
     ingredients: {
       type: 'array',
@@ -142,8 +147,54 @@ interface ExtractedRecipe {
 }
 
 /**
- * Server function to fetch and save recipe from a URL using Firecrawl.
- * Scrapes the given URL and extracts structured recipe data.
+ * Extract recipe data from a website using Firecrawl.
+ */
+const extractFromWebsite = async (url: string): Promise<ExtractedRecipe> => {
+  const apiKey = process.env.FIRECRAWL_API_KEY
+  if (!apiKey) {
+    throw new Error('FIRECRAWL_API_KEY is not configured')
+  }
+
+  const firecrawl = new Firecrawl({ apiKey })
+
+  // Firecrawlでページをスクレイピングし、レシピデータを構造化抽出
+  const scrapeResult = await firecrawl.scrape(url, {
+    formats: [
+      {
+        type: 'json',
+        schema: recipeExtractionSchema,
+      },
+    ],
+  })
+
+  return (scrapeResult.json ?? {}) as ExtractedRecipe
+}
+
+/**
+ * Extract recipe data from a YouTube video using transcript + Gemini AI.
+ */
+const extractFromYouTube = async (url: string): Promise<ExtractedRecipe> => {
+  const videoInfo = await fetchYouTubeVideoInfo(url)
+
+  // 字幕と説明欄を結合してGeminiに渡す
+  const parts: string[] = []
+  if (videoInfo.transcript) {
+    parts.push(`[Transcript]\n${videoInfo.transcript}`)
+  }
+  if (videoInfo.description) {
+    parts.push(`[Video Description]\n${videoInfo.description}`)
+  }
+  const content = parts.join('\n\n')
+
+  return extractRecipeWithGemini(content, {
+    videoTitle: videoInfo.title,
+    sourceUrl: url,
+  })
+}
+
+/**
+ * Server function to import a recipe from a URL.
+ * Supports both regular websites (via Firecrawl) and YouTube videos (via transcript + Gemini).
  */
 export const importRecipe = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ url: z.string().url() }))
@@ -157,26 +208,11 @@ export const importRecipe = createServerFn({ method: 'POST' })
       throw new Error('Unauthorized')
     }
 
-    const apiKey = process.env.FIRECRAWL_API_KEY
-    if (!apiKey) {
-      throw new Error('FIRECRAWL_API_KEY is not configured')
-    }
-
     try {
-      const firecrawl = new Firecrawl({ apiKey })
-
-      // Firecrawlでページをスクレイピングし、レシピデータを構造化抽出
-      // v2 SDKのscrape()は成功時にDocumentを返し、失敗時は例外をスロー
-      const scrapeResult = await firecrawl.scrape(url, {
-        formats: [
-          {
-            type: 'json',
-            schema: recipeExtractionSchema,
-          },
-        ],
-      })
-
-      const extracted = (scrapeResult.json ?? {}) as ExtractedRecipe
+      // URL種別に応じて抽出方法を切り替え
+      const extracted = isYouTubeUrl(url)
+        ? await extractFromYouTube(url)
+        : await extractFromWebsite(url)
 
       const recipeId = nanoid()
       await db.insert(recipes).values({
@@ -222,11 +258,13 @@ export const importRecipe = createServerFn({ method: 'POST' })
 const updateRecipeInputSchema = z.object({
   recipeId: z.string().min(1),
   title: z.string().min(1),
+  sourceUrl: z.string().url().optional(),
   description: z.string().optional(),
   servings: z.number().int().positive().optional(),
   prepTime: z.number().int().nonnegative().optional(),
   cookTime: z.number().int().nonnegative().optional(),
   instructions: z.string().optional(),
+  memo: z.string().optional(),
   ingredients: z.array(ingredientInputSchema).optional(),
 })
 
@@ -262,11 +300,13 @@ export const updateRecipe = createServerFn({ method: 'POST' })
         .update(recipes)
         .set({
           title: data.title,
+          sourceUrl: data.sourceUrl ?? null,
           description: data.description ?? null,
           servings: data.servings ?? null,
           prepTime: data.prepTime ?? null,
           cookTime: data.cookTime ?? null,
           instructions: data.instructions ?? null,
+          memo: data.memo ?? null,
         })
         .where(eq(recipes.id, data.recipeId))
 

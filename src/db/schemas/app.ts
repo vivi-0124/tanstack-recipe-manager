@@ -25,6 +25,7 @@ export const recipes = sqliteTable(
     prepTime: integer('prep_time'), // in minutes
     cookTime: integer('cook_time'), // in minutes
     instructions: text('instructions'), // JSON stringified or markdown
+    memo: text('memo'),
     isFavorite: integer('is_favorite', { mode: 'boolean' })
       .default(false)
       .notNull(),
