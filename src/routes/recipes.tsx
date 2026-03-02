@@ -483,7 +483,7 @@ function RecipesPage() {
             </div>
           ) : selectedRecipe ? (
             <>
-              <ScrollArea className="max-h-[60vh]">
+              <ScrollArea className="max-h-[calc(85vh-3rem)]">
                 <div className="flex flex-col gap-4 px-6 pb-6 pt-2">
                   <DialogHeader className="text-left">
                     <DialogTitle className="text-xl">
@@ -721,6 +721,14 @@ function RecipesPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+      {/* モバイル用FAB: レシピ追加ダイアログを開く */}
+      <Button
+        className="fixed right-4 bottom-20 z-40 size-14 rounded-full shadow-lg sm:hidden [&_svg]:size-6!"
+        onClick={() => setIsDialogOpen(true)}
+      >
+        <Plus />
+        <span className="sr-only">レシピを追加</span>
+      </Button>
     </div>
   )
 }
