@@ -1018,7 +1018,7 @@ function RecipeForm({
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               disabled={isSubmitting}
-              rows={4}
+              rows={6}
             />
           </div>
         </div>
