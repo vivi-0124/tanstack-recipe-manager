@@ -88,16 +88,6 @@ function SharedRecipePage() {
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
       <Card className="overflow-hidden">
-        {recipe.image && (
-          <div className="aspect-video w-full overflow-hidden">
-            <img
-              src={recipe.image}
-              alt={recipe.title}
-              className="size-full object-cover"
-            />
-          </div>
-        )}
-
         <CardHeader>
           <CardTitle className="text-xl">{recipe.title}</CardTitle>
           {recipe.description && (

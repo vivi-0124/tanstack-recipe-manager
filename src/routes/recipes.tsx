@@ -89,7 +89,6 @@ interface RecipeDetail {
   id: string
   title: string
   sourceUrl: string | null
-  image: string | null
   description: string | null
   servings: number | null
   prepTime: number | null
@@ -343,15 +342,6 @@ function RecipesPage() {
               className="flex cursor-pointer flex-col overflow-hidden border-border/60 transition-shadow hover:shadow-md"
               onClick={() => handleOpenDetail(recipe.id)}
             >
-              {recipe.image && (
-                <div className="aspect-video w-full overflow-hidden">
-                  <img
-                    src={recipe.image}
-                    alt={recipe.title}
-                    className="size-full object-cover"
-                  />
-                </div>
-              )}
               <CardHeader className="pb-2">
                 <CardTitle className="line-clamp-2 text-base">
                   {recipe.title}
@@ -493,15 +483,6 @@ function RecipesPage() {
             </div>
           ) : selectedRecipe ? (
             <>
-              {selectedRecipe.image && (
-                <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                  <img
-                    src={selectedRecipe.image}
-                    alt={selectedRecipe.title}
-                    className="size-full object-cover"
-                  />
-                </div>
-              )}
               <ScrollArea className="max-h-[60vh]">
                 <div className="flex flex-col gap-4 px-6 pb-6 pt-2">
                   <DialogHeader className="text-left">

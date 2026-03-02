@@ -21,7 +21,6 @@ const createRecipeInputSchema = z.object({
   prepTime: z.number().int().nonnegative().optional(),
   cookTime: z.number().int().nonnegative().optional(),
   instructions: z.string().optional(),
-  image: z.string().url().optional(),
   ingredients: z.array(ingredientInputSchema).optional(),
 })
 
@@ -47,7 +46,6 @@ export const createRecipe = createServerFn({ method: 'POST' })
         userId: session.user.id,
         title: data.title,
         sourceUrl: null,
-        image: data.image ?? null,
         description: data.description ?? null,
         servings: data.servings ?? null,
         prepTime: data.prepTime ?? null,
@@ -106,10 +104,6 @@ const recipeExtractionSchema = {
       description:
         'Step-by-step cooking instructions as a numbered list in plain text',
     },
-    image: {
-      type: 'string',
-      description: 'URL of the main recipe image',
-    },
     ingredients: {
       type: 'array',
       items: {
@@ -140,7 +134,6 @@ interface ExtractedRecipe {
   prepTime?: number
   cookTime?: number
   instructions?: string
-  image?: string
   ingredients?: Array<{
     name: string
     quantity?: string
@@ -191,7 +184,6 @@ export const importRecipe = createServerFn({ method: 'POST' })
         userId: session.user.id,
         title: extracted.title || `Imported from ${new URL(url).hostname}`,
         sourceUrl: url,
-        image: extracted.image ?? null,
         description: extracted.description ?? null,
         servings: extracted.servings ?? null,
         prepTime: extracted.prepTime ?? null,
@@ -235,7 +227,6 @@ const updateRecipeInputSchema = z.object({
   prepTime: z.number().int().nonnegative().optional(),
   cookTime: z.number().int().nonnegative().optional(),
   instructions: z.string().optional(),
-  image: z.string().url().optional(),
   ingredients: z.array(ingredientInputSchema).optional(),
 })
 
@@ -276,7 +267,6 @@ export const updateRecipe = createServerFn({ method: 'POST' })
           prepTime: data.prepTime ?? null,
           cookTime: data.cookTime ?? null,
           instructions: data.instructions ?? null,
-          image: data.image ?? null,
         })
         .where(eq(recipes.id, data.recipeId))
 

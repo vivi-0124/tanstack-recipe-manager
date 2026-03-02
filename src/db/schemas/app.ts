@@ -14,7 +14,6 @@ export const recipes = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     sourceUrl: text('source_url'),
-    image: text('image'),
     description: text('description'),
     servings: integer('servings'),
     prepTime: integer('prep_time'), // in minutes
