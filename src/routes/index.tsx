@@ -3,6 +3,7 @@ import { useServerFn } from '@tanstack/react-start'
 import {
   BookOpen,
   Box,
+  Check,
   ChefHat,
   ChevronDown,
   ChevronUp,
@@ -13,14 +14,12 @@ import {
   ShoppingCart,
   Trash2,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  addUnit,
-  deleteUnit,
   getMyUnits,
-  reorderUnit,
   resetUnits,
+  saveAllUnits,
 } from '../actions/units'
 import { GoogleLoginButton } from '../components/google-login-button'
 import { Button } from '../components/ui/button'
@@ -70,28 +69,35 @@ interface UserUnit {
 
 function UnitSettingsDialog() {
   const [open, setOpen] = useState(false)
-  const [units, setUnits] = useState<UserUnit[]>([])
+  // DBから取得した元の状態
+  const [savedUnits, setSavedUnits] = useState<UserUnit[]>([])
+  // ローカル編集中の状態
+  const [localUnits, setLocalUnits] = useState<UserUnit[]>([])
   const [newUnitName, setNewUnitName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isAdding, setIsAdding] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchUnits = useServerFn(getMyUnits)
-  const addUnitFn = useServerFn(addUnit)
-  const deleteUnitFn = useServerFn(deleteUnit)
-  const reorderUnitFn = useServerFn(reorderUnit)
+  const saveAllUnitsFn = useServerFn(saveAllUnits)
   const resetUnitsFn = useServerFn(resetUnits)
+
+  // 変更があるかどうかを判定
+  const isDirty =
+    JSON.stringify(savedUnits.map((u) => u.name)) !==
+    JSON.stringify(localUnits.map((u) => u.name))
 
   const loadUnits = useCallback(async () => {
     setIsLoading(true)
     try {
       const result = await fetchUnits()
-      setUnits(
-        result.map((u) => ({
-          id: u.id,
-          name: u.name,
-          sortOrder: u.sortOrder,
-        })),
-      )
+      const mapped = result.map((u) => ({
+        id: u.id,
+        name: u.name,
+        sortOrder: u.sortOrder,
+      }))
+      setSavedUnits(mapped)
+      setLocalUnits(mapped)
     } catch {
       toast.error('単位の取得に失敗しました')
     } finally {
@@ -100,57 +106,109 @@ function UnitSettingsDialog() {
   }, [fetchUnits])
 
   const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen && isDirty) {
+      // 未保存の変更がある場合は破棄して閉じる
+      setLocalUnits(savedUnits)
+    }
     setOpen(isOpen)
     if (isOpen) {
+      setNewUnitName('')
       loadUnits()
     }
   }
 
-  const handleAdd = async () => {
+  const handleAdd = () => {
     const trimmed = newUnitName.trim()
     if (!trimmed) return
 
-    setIsAdding(true)
+    // ローカルで重複チェック
+    if (localUnits.some((u) => u.name === trimmed)) {
+      toast.error('この単位は既に存在します')
+      return
+    }
+
+    const maxOrder = Math.max(-1, ...localUnits.map((u) => u.sortOrder))
+    setLocalUnits((prev) => [
+      ...prev,
+      {
+        // ローカル用の一時ID
+        id: `local-${Date.now()}`,
+        name: trimmed,
+        sortOrder: maxOrder + 1,
+      },
+    ])
+    setNewUnitName('')
+  }
+
+  const handleDelete = (unit: UserUnit) => {
+    setLocalUnits((prev) => prev.filter((u) => u.id !== unit.id))
+  }
+
+  const handleReorder = (id: string, direction: 'up' | 'down') => {
+    setLocalUnits((prev) => {
+      const idx = prev.findIndex((u) => u.id === id)
+      if (idx === -1) return prev
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+      if (swapIdx < 0 || swapIdx >= prev.length) return prev
+
+      const next = [...prev]
+      // sortOrderを入れ替え
+      const tmpOrder = next[idx].sortOrder
+      next[idx] = { ...next[idx], sortOrder: next[swapIdx].sortOrder }
+      next[swapIdx] = { ...next[swapIdx], sortOrder: tmpOrder }
+      // 配列上の位置も入れ替え
+      ;[next[idx], next[swapIdx]] = [next[swapIdx], next[idx]]
+      return next
+    })
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
     try {
-      await addUnitFn({ data: { name: trimmed } })
-      setNewUnitName('')
-      await loadUnits()
-      toast.success(`「${trimmed}」を追加しました`)
+      await saveAllUnitsFn({
+        data: {
+          units: localUnits.map((u, idx) => ({
+            name: u.name,
+            sortOrder: idx,
+          })),
+        },
+      })
+      // 保存成功後、再取得して状態を同期
+      const result = await fetchUnits()
+      const mapped = result.map((u) => ({
+        id: u.id,
+        name: u.name,
+        sortOrder: u.sortOrder,
+      }))
+      setSavedUnits(mapped)
+      setLocalUnits(mapped)
+      toast.success('単位の設定を保存しました')
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : '単位の追加に失敗しました'
+        error instanceof Error ? error.message : '保存に失敗しました'
       toast.error(message)
     } finally {
-      setIsAdding(false)
-    }
-  }
-
-  const handleDelete = async (unit: UserUnit) => {
-    try {
-      await deleteUnitFn({ data: { id: unit.id } })
-      setUnits((prev) => prev.filter((u) => u.id !== unit.id))
-      toast.success(`「${unit.name}」を削除しました`)
-    } catch {
-      toast.error('単位の削除に失敗しました')
-    }
-  }
-
-  const handleReorder = async (id: string, direction: 'up' | 'down') => {
-    try {
-      await reorderUnitFn({ data: { id, direction } })
-      await loadUnits()
-    } catch {
-      toast.error('並び替えに失敗しました')
+      setIsSaving(false)
     }
   }
 
   const handleReset = async () => {
+    setIsSaving(true)
     try {
       await resetUnitsFn()
-      await loadUnits()
+      const result = await fetchUnits()
+      const mapped = result.map((u) => ({
+        id: u.id,
+        name: u.name,
+        sortOrder: u.sortOrder,
+      }))
+      setSavedUnits(mapped)
+      setLocalUnits(mapped)
       toast.success('デフォルトの単位にリセットしました')
     } catch {
       toast.error('リセットに失敗しました')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -161,7 +219,7 @@ function UnitSettingsDialog() {
           <Settings className="size-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>単位の設定</DialogTitle>
           <DialogDescription>
@@ -172,6 +230,7 @@ function UnitSettingsDialog() {
         {/* 追加フォーム */}
         <div className="flex gap-2">
           <Input
+            ref={inputRef}
             placeholder="新しい単位を入力..."
             value={newUnitName}
             onChange={(e) => setNewUnitName(e.target.value)}
@@ -181,19 +240,14 @@ function UnitSettingsDialog() {
                 handleAdd()
               }
             }}
-            disabled={isAdding}
           />
           <Button
             onClick={handleAdd}
-            disabled={isAdding || !newUnitName.trim()}
+            disabled={!newUnitName.trim()}
             size="icon"
             className="shrink-0"
           >
-            {isAdding ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Plus className="size-4" />
-            )}
+            <Plus className="size-4" />
           </Button>
         </div>
 
@@ -202,7 +256,7 @@ function UnitSettingsDialog() {
           <div className="flex justify-center py-8">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
-        ) : units.length === 0 ? (
+        ) : localUnits.length === 0 ? (
           <Empty className="py-4">
             <EmptyDescription>
               単位がありません。上のフォームから追加してください。
@@ -211,7 +265,7 @@ function UnitSettingsDialog() {
         ) : (
           <ScrollArea className="max-h-[50vh]">
             <div className="space-y-1 pr-3">
-              {units.map((unit, idx) => (
+              {localUnits.map((unit, idx) => (
                 <div
                   key={unit.id}
                   className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2"
@@ -234,7 +288,7 @@ function UnitSettingsDialog() {
                       size="icon-sm"
                       className="size-7"
                       onClick={() => handleReorder(unit.id, 'down')}
-                      disabled={idx === units.length - 1}
+                      disabled={idx === localUnits.length - 1}
                     >
                       <ChevronDown className="size-4" />
                     </Button>
@@ -253,16 +307,30 @@ function UnitSettingsDialog() {
           </ScrollArea>
         )}
 
-        {/* リセットボタン */}
-        <div className="flex justify-end border-t pt-3">
+        {/* フッター: リセット + 適用 */}
+        <div className="flex items-center justify-between border-t pt-3">
           <Button
             variant="outline"
             size="sm"
             onClick={handleReset}
+            disabled={isSaving}
             className="gap-1.5"
           >
             <RotateCcw className="size-3.5" />
             デフォルトに戻す
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!isDirty || isSaving}
+            className="gap-1.5"
+          >
+            {isSaving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Check className="size-3.5" />
+            )}
+            適用
           </Button>
         </div>
       </DialogContent>

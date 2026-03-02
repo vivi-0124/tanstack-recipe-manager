@@ -185,3 +185,42 @@ export const resetUnits = createServerFn({ method: 'POST' }).handler(
     return { success: true }
   },
 )
+
+/**
+ * Batch-save the entire unit list, replacing all existing units.
+ */
+export const saveAllUnits = createServerFn({ method: 'POST' })
+  .inputValidator(
+    z.object({
+      units: z.array(
+        z.object({
+          name: z.string().min(1),
+          sortOrder: z.number(),
+        }),
+      ),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const session = await requireSession()
+
+    // 重複チェック（クライアント側でも行うが念のため）
+    const names = data.units.map((u) => u.name)
+    if (new Set(names).size !== names.length) {
+      throw new Error('重複する単位名があります')
+    }
+
+    // 既存の全単位を削除して再挿入
+    await db.delete(userUnits).where(eq(userUnits.userId, session.user.id))
+
+    if (data.units.length > 0) {
+      const values = data.units.map((u) => ({
+        id: nanoid(),
+        userId: session.user.id,
+        name: u.name,
+        sortOrder: u.sortOrder,
+      }))
+      await db.insert(userUnits).values(values)
+    }
+
+    return { success: true }
+  })
