@@ -77,6 +77,7 @@ function UnitSettingsDialog() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const fetchUnits = useServerFn(getMyUnits)
   const saveAllUnitsFn = useServerFn(saveAllUnits)
@@ -159,6 +160,25 @@ function UnitSettingsDialog() {
       // 配列上の位置も入れ替え
       ;[next[idx], next[swapIdx]] = [next[swapIdx], next[idx]]
       return next
+    })
+
+    // スクロール位置を補正して、同じ画面位置でボタンを連打できるようにする
+    requestAnimationFrame(() => {
+      const listEl = listRef.current
+      if (!listEl) return
+      const viewport = listEl.closest('[data-slot="scroll-area-viewport"]')
+      if (!viewport) return
+      const items = listEl.children
+      if (items.length < 2) return
+
+      // 連続するアイテム間の距離を1アイテム分のスクロール量として算出
+      const item0 = items[0] as HTMLElement
+      const item1 = items[1] as HTMLElement
+      const scrollAmount = item1.offsetTop - item0.offsetTop
+
+      viewport.scrollBy({
+        top: direction === 'up' ? -scrollAmount : scrollAmount,
+      })
     })
   }
 
@@ -264,7 +284,7 @@ function UnitSettingsDialog() {
           </Empty>
         ) : (
           <ScrollArea className="max-h-[50vh]">
-            <div className="space-y-1 pr-3">
+            <div ref={listRef} className="space-y-1 pr-3">
               {localUnits.map((unit, idx) => (
                 <div
                   key={unit.id}
