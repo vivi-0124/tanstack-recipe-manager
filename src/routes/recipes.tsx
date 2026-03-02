@@ -214,6 +214,38 @@ function RecipesPage() {
     }
   }
 
+  /** 詳細を取得して編集モードで開く */
+  const handleOpenEdit = async (recipeId: string) => {
+    setIsDetailOpen(true)
+    setIsLoadingDetail(true)
+    setIsEditing(true)
+    setShareUrl(null)
+    setIsCopied(false)
+    try {
+      const detail = await getDetailFn({ data: { recipeId } })
+      setSelectedRecipe(detail as RecipeDetail)
+    } catch (error) {
+      toast.error('レシピの詳細を取得できませんでした。')
+      console.error(error)
+      setIsDetailOpen(false)
+    } finally {
+      setIsLoadingDetail(false)
+    }
+  }
+
+  /** カードから直接共有リンクを生成してクリップボードにコピー */
+  const handleShareFromCard = async (recipeId: string) => {
+    try {
+      const result = await shareFn({ data: { recipeId } })
+      const url = `${window.location.origin}/share/${result.shareToken}`
+      await navigator.clipboard.writeText(url)
+      toast.success('共有リンクをコピーしました')
+    } catch (error) {
+      toast.error('共有リンクの作成に失敗しました。')
+      console.error(error)
+    }
+  }
+
   const handleDeleteRecipe = async (recipeId: string) => {
     setIsDeleting(true)
     try {
@@ -345,8 +377,8 @@ function RecipesPage() {
                   </div>
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 pt-0">
-                <p className="mb-3 line-clamp-3 text-sm text-muted-foreground">
+              <CardContent className="flex flex-1 flex-col pt-0">
+                <p className="mb-3 line-clamp-3 flex-1 text-sm text-muted-foreground">
                   {recipe.description || '説明はありません。'}
                 </p>
                 {recipe.sourceUrl && (
@@ -354,13 +386,39 @@ function RecipesPage() {
                     href={recipe.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    className="mb-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ExternalLink className="size-3" />
                     元のサイトを見る
                   </a>
                 )}
+                <div className="flex items-center gap-1.5 border-t border-border/40 pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenEdit(recipe.id)
+                    }}
+                  >
+                    <Pencil className="size-3" />
+                    編集
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleShareFromCard(recipe.id)
+                    }}
+                  >
+                    <Share2 className="size-3" />
+                    共有
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))
@@ -886,51 +944,73 @@ function RecipeForm({
             <span className="text-sm font-medium">材料</span>
             <div className="flex flex-col gap-2">
               {ingredientInputs.map((ing, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <Input
-                    placeholder="材料名"
-                    value={ing.name}
-                    onChange={(e) =>
-                      updateIngredient(idx, 'name', e.target.value)
-                    }
-                    disabled={isSubmitting}
-                    className="min-w-0 flex-1"
-                  />
-                  <Input
-                    placeholder="量"
-                    value={ing.quantity}
-                    onChange={(e) =>
-                      updateIngredient(
-                        idx,
-                        'quantity',
-                        toHalfWidth(e.target.value),
-                      )
-                    }
-                    disabled={isSubmitting}
-                    className="w-16 shrink-0"
-                  />
-                  <Input
-                    placeholder="単位"
-                    list={`${formId}-unit-suggestions`}
-                    value={ing.unit}
-                    onChange={(e) =>
-                      updateIngredient(idx, 'unit', e.target.value)
-                    }
-                    disabled={isSubmitting}
-                    className="w-18 shrink-0"
-                  />
-                  {ingredientInputs.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="size-8 shrink-0"
-                      onClick={() => removeIngredientRow(idx)}
+                <div key={idx} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      placeholder="材料名"
+                      value={ing.name}
+                      onChange={(e) =>
+                        updateIngredient(idx, 'name', e.target.value)
+                      }
                       disabled={isSubmitting}
-                    >
-                      <Minus className="size-4" />
-                    </Button>
-                  )}
+                      className="min-w-0 flex-1"
+                    />
+                    <Input
+                      placeholder="量"
+                      value={ing.quantity}
+                      onChange={(e) =>
+                        updateIngredient(
+                          idx,
+                          'quantity',
+                          toHalfWidth(e.target.value),
+                        )
+                      }
+                      disabled={isSubmitting}
+                      className="w-16 shrink-0"
+                    />
+                    <Input
+                      placeholder="単位"
+                      value={ing.unit}
+                      onChange={(e) =>
+                        updateIngredient(idx, 'unit', e.target.value)
+                      }
+                      disabled={isSubmitting}
+                      className="w-18 shrink-0"
+                    />
+                    {ingredientInputs.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-8 shrink-0"
+                        onClick={() => removeIngredientRow(idx)}
+                        disabled={isSubmitting}
+                      >
+                        <Minus className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {/* 単位の候補チップ */}
+                  <div className="flex flex-wrap gap-1 pl-0.5">
+                    {UNIT_SUGGESTIONS.map((unit) => (
+                      <button
+                        key={unit}
+                        type="button"
+                        disabled={isSubmitting}
+                        className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                          ing.unit === unit
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-muted/50 text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                        }`}
+                        onClick={() => {
+                          // 同じ単位をタップしたらクリア
+                          updateIngredient(idx, 'unit', ing.unit === unit ? '' : unit)
+                        }}
+                      >
+                        {unit}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -995,12 +1075,6 @@ function RecipeForm({
         </Button>
       </div>
 
-      {/* 単位の候補リスト - 選択も自由入力も可能 */}
-      <datalist id={`${formId}-unit-suggestions`}>
-        {UNIT_SUGGESTIONS.map((unit) => (
-          <option key={unit} value={unit} />
-        ))}
-      </datalist>
     </form>
   )
 }
