@@ -285,9 +285,6 @@ function Home() {
         <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
           Recipe Manager
         </h1>
-        <p className="max-w-xl text-base text-muted-foreground sm:text-lg">
-          レシピの管理、食材の在庫管理、買い物リストをひとつのアプリで。
-        </p>
       </div>
 
       <div className="mt-8 sm:mt-12">
